@@ -1,14 +1,15 @@
 import "dotenv/config";
 import express from "express";
-import { connetToDb, getDb } from "./db.js";
+import { Db } from "mongodb";
+import { connetToDb, getDb } from "./src/db";
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || "3000";
 const app = express();
-let db;
+let db: Db;
 
-connetToDb((error) => {
+connetToDb((error: Error) => {
   if (!error) {
-    app.listen(PORT, (error) =>
+    app.listen(PORT, () =>
       error ? console.log(error) : console.log(`Listen port ${PORT}`)
     );
     db = getDb();
