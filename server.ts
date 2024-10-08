@@ -1,7 +1,8 @@
 import "dotenv/config";
-import express from "express";
-import { Db } from "mongodb";
+import express, { Response } from "express";
+import { Db, ObjectId } from "mongodb";
 import { connetToDb, getDb } from "./src/db";
+import { error } from "console";
 
 export interface Duration {
   hours: number;
@@ -28,6 +29,14 @@ const MOVIES = "movies";
 const app = express();
 let db: Db;
 
+const getMoviesCollection = async () => db.collection<Movie>(MOVIES);
+
+const handleError = (res: Response, error: Error | string) => {
+  res.status(500).json(error);
+};
+
+const isValidId = (id: string) => ObjectId.isValid(id);
+
 connetToDb((error: Error) => {
   if (!error) {
     app.listen(PORT, () =>
@@ -39,12 +48,43 @@ connetToDb((error: Error) => {
   }
 });
 
-app.get(`/${MOVIES}`, async (req, res) => {
-  try {
-    const movies = await db.collection<Movie>(MOVIES).find().toArray();
+app.get(`/${MOVIES}`, (req, res) => {
+  getMoviesCollection()
+    .then((collection) => collection.find().toArray())
+    .then((movies) => res.status(200).json(movies))
+    .catch((error) => handleError(res, error));
+});
 
-    res.status(200).json(movies);
-  } catch (error) {
-    res.status(500).json({ error });
+app.get(`/${MOVIES}/:id`, async (req, res) => {
+  const id = req.params.id;
+
+  if (isValidId(id)) {
+    getMoviesCollection()
+      .then((collection) =>
+        collection.findOne({
+          _id: new ObjectId(id),
+        })
+      )
+      .then((movie) => res.status(200).json(movie))
+      .catch((error) => handleError(res, error));
+  } else {
+    handleError(res, "Incorrect movie's ID...");
+  }
+});
+
+app.delete(`/${MOVIES}/:id`, async (req, res) => {
+  const id = req.params.id;
+
+  if (isValidId(id)) {
+    getMoviesCollection()
+      .then((collection) =>
+        collection.deleteOne({
+          _id: new ObjectId(id),
+        })
+      )
+      .then((deleteResult) => res.status(200).json(deleteResult))
+      .catch((error) => handleError(res, error));
+  } else {
+    handleError(res, "Incorrect movie's ID...");
   }
 });
