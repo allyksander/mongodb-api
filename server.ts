@@ -26,6 +26,7 @@ export interface Movie {
 
 const PORT = process.env.PORT || "3000";
 const MOVIES = "movies";
+const MOVIES_ID = `${MOVIES}/:id`;
 const app = express();
 let db: Db;
 
@@ -48,6 +49,8 @@ connetToDb((error: Error) => {
   }
 });
 
+app.use(express.json());
+
 app.get(`/${MOVIES}`, (req, res) => {
   getMoviesCollection()
     .then((collection) => collection.find().toArray())
@@ -55,7 +58,7 @@ app.get(`/${MOVIES}`, (req, res) => {
     .catch((error) => handleError(res, error));
 });
 
-app.get(`/${MOVIES}/:id`, async (req, res) => {
+app.get(`/${MOVIES_ID}`, async (req, res) => {
   const id = req.params.id;
 
   if (isValidId(id)) {
@@ -72,7 +75,7 @@ app.get(`/${MOVIES}/:id`, async (req, res) => {
   }
 });
 
-app.delete(`/${MOVIES}/:id`, async (req, res) => {
+app.delete(`/${MOVIES_ID}`, async (req, res) => {
   const id = req.params.id;
 
   if (isValidId(id)) {
@@ -83,6 +86,35 @@ app.delete(`/${MOVIES}/:id`, async (req, res) => {
         })
       )
       .then((deleteResult) => res.status(200).json(deleteResult))
+      .catch((error) => handleError(res, error));
+  } else {
+    handleError(res, "Incorrect movie's ID...");
+  }
+});
+
+app.post(`/${MOVIES}`, (req, res) => {
+  getMoviesCollection()
+    .then((collection) => collection.insertOne(req.body as Movie))
+    .then((inserResult) => res.status(200).json(inserResult))
+    .catch((error) => handleError(res, error));
+});
+
+app.patch(`/${MOVIES_ID}`, (req, res) => {
+  const id = req.params.id;
+
+  if (isValidId(id)) {
+    getMoviesCollection()
+      .then((collection) =>
+        collection.updateOne(
+          {
+            _id: new ObjectId(id),
+          },
+          {
+            $set: req.body as Partial<Movie>,
+          }
+        )
+      )
+      .then((updateResult) => res.status(200).json(updateResult))
       .catch((error) => handleError(res, error));
   } else {
     handleError(res, "Incorrect movie's ID...");
